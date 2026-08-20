@@ -1,16 +1,30 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Resolve __dirname safely for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Resolve the public directory — try both common locations
+const publicDir = existsSync(join(__dirname, 'public'))
+  ? join(__dirname, 'public')
+  : join(process.cwd(), 'public');
+
+console.log('__dirname   :', __dirname);
+console.log('process.cwd :', process.cwd());
+console.log('publicDir   :', publicDir);
+console.log('public exists:', existsSync(publicDir));
 
 app.use(express.json());
-app.use(express.static(join(__dirname, 'public')));
+app.use(express.static(publicDir));
 
-// ── Proxy endpoint ───────────────────────────────────────────────────────────
+// ── Proxy endpoint ────────────────────────────────────────────────────────────
 app.post('/api/transform', async (req, res) => {
   const { text } = req.body;
 
@@ -19,8 +33,8 @@ app.post('/api/transform', async (req, res) => {
   }
 
   if (!GEMINI_API_KEY) {
-    console.error('GEMINI_API_KEY environment variable is not set.');
-    return res.status(500).json({ error: 'Server configuration error.' });
+    console.error('GEMINI_API_KEY is not set.');
+    return res.status(500).json({ error: 'Server configuration error: API key missing.' });
   }
 
   const prompt = `You are a professional communication coach. The user typed their raw, honest, possibly rude inner reaction. Rewrite it as a professional, respectful, constructive message for a workplace or formal context.
@@ -75,11 +89,19 @@ Professional version:`;
   }
 });
 
-// ── Fallback: serve index.html for any unknown route ────────────────────────
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ── Fallback: serve index.html for all other GET routes ───────────────────────
 app.get('*', (_req, res) => {
-  res.sendFile(join(__dirname, 'public', 'index.html'));
+  const indexPath = join(publicDir, 'index.html');
+  if (existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(500).send(`index.html not found. publicDir=${publicDir}`);
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
