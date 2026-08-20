@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Honest Reaction → Professional Reply</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d1a;
+      --card: rgba(255,255,255,0.05);
+      --card-border: rgba(255,255,255,0.1);
+      --accent-raw: #ff6b6b;
+      --accent-pro: #4ecdc4;
+      --text: #f0f0f5;
+      --muted: rgba(240,240,245,0.5);
+      --radius: clamp(10px, 2vw, 16px);
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --panel-pad: clamp(14px, 3vw, 24px);
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center;
+      padding: clamp(16px, 4vw, 40px) clamp(12px, 3vw, 24px) clamp(40px, 8vw, 80px);
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(255,107,107,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(78,205,196,0.12) 0%, transparent 60%);
+    }
+
+    /* ── Header ── */
+    header { text-align: center; margin-bottom: clamp(24px, 5vw, 44px); width: 100%; }
+    header h1 {
+      font-size: clamp(1.25rem, 4vw, 2.4rem); font-weight: 700;
+      background: linear-gradient(135deg, #ff6b6b, #ffd93d, #4ecdc4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; letter-spacing: -0.5px; line-height: 1.3;
+    }
+    header p { margin-top: 8px; color: var(--muted); font-size: clamp(0.8rem, 2vw, 0.95rem); }
+
+    /* ── Layout grid ── */
+    .app-grid {
+      width: 100%; max-width: 1100px;
+      display: grid;
+      grid-template-columns: 1fr 44px 1fr;
+      gap: 0;
+      align-items: start;
+    }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: var(--radius); backdrop-filter: blur(12px);
+      padding: var(--panel-pad); box-shadow: var(--shadow);
+      display: flex; flex-direction: column; gap: 12px;
+      min-width: 0; /* prevent overflow */
+    }
+    .panel-header { display: flex; align-items: center; gap: 8px; }
+    .panel-title {
+      font-size: clamp(0.7rem, 1.5vw, 0.8rem); font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .panel-title .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .raw .dot { background: var(--accent-raw); box-shadow: 0 0 8px var(--accent-raw); }
+    .pro .dot { background: var(--accent-pro); box-shadow: 0 0 8px var(--accent-pro); }
+
+    /* ── Textareas ── */
+    textarea {
+      width: 100%;
+      min-height: clamp(160px, 30vh, 280px);
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; padding: clamp(10px, 2vw, 14px); color: var(--text);
+      font-size: clamp(0.875rem, 1.5vw, 1rem); font-family: inherit; line-height: 1.7;
+      resize: vertical; outline: none; transition: border-color 0.25s;
+    }
+    textarea::placeholder { color: var(--muted); }
+    textarea:focus { border-color: rgba(255,107,107,0.5); }
+    #proOutput { background: rgba(78,205,196,0.04); border-color: rgba(78,205,196,0.15); }
+    #proOutput.loading { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+    /* ── Footer row inside panel ── */
+    .panel-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .char-count { font-size: clamp(0.7rem, 1.5vw, 0.75rem); color: var(--muted); }
+
+    /* ── Buttons ── */
+    .copy-btn {
+      padding: clamp(5px, 1vw, 7px) clamp(10px, 2vw, 14px);
+      background: rgba(78,205,196,0.12);
+      border: 1px solid rgba(78,205,196,0.3); border-radius: 8px;
+      color: var(--accent-pro); font-size: clamp(0.75rem, 1.5vw, 0.8rem);
+      font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
+    .copy-btn:hover { background: rgba(78,205,196,0.22); }
+    .clear-btn {
+      padding: clamp(5px, 1vw, 7px) clamp(10px, 2vw, 12px);
+      background: rgba(255,107,107,0.1);
+      border: 1px solid rgba(255,107,107,0.25); border-radius: 8px;
+      color: var(--accent-raw); font-size: clamp(0.75rem, 1.5vw, 0.8rem);
+      cursor: pointer; white-space: nowrap;
+    }
+    .clear-btn:hover { background: rgba(255,107,107,0.2); }
+    .submit-btn {
+      width: 100%;
+      padding: clamp(10px, 2vw, 13px) 20px;
+      background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: clamp(0.9rem, 2vw, 1rem);
+      font-weight: 700; cursor: pointer; letter-spacing: 0.03em;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .submit-btn:active:not(:disabled) { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Arrow divider ── */
+    .divider {
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: clamp(52px, 8vw, 80px);
+    }
+    .arrow-icon {
+      width: 34px; height: 34px; flex-shrink: 0;
+      background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(78,205,196,0.2));
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 1rem;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      margin-top: 14px; width: 100%; max-width: 1100px;
+      text-align: center; font-size: clamp(0.75rem, 1.5vw, 0.82rem);
+      color: var(--muted); min-height: 1.4em;
+    }
+    .status-bar.error { color: var(--accent-raw); }
+    .status-bar.success { color: var(--accent-pro); }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: clamp(28px, 5vw, 48px);
+      color: var(--muted); font-size: clamp(0.72rem, 1.5vw, 0.8rem);
+      text-align: center;
+    }
+    footer strong { color: var(--text); font-weight: 600; }
+
+    /* ── Responsive breakpoints ── */
+
+    /* Tablet / small desktop: 601px – 860px */
+    @media (max-width: 860px) {
+      .app-grid { max-width: 100%; }
+    }
+
+    /* Mobile: <= 600px */
+    @media (max-width: 600px) {
+      .app-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+      .divider {
+        padding-top: 0;
+        padding-bottom: 0;
+        margin: 10px auto;
+        align-items: center;
+      }
+      .arrow-icon { transform: rotate(90deg); }
+      textarea { min-height: clamp(130px, 28vw, 180px); }
+    }
+
+    /* Large screens: >= 1200px */
+    @media (min-width: 1200px) {
+      .app-grid { max-width: 1200px; }
+      .status-bar { max-width: 1200px; }
+    }
+
+    /* Touch / pointer: make buttons larger for tap targets */
+    @media (pointer: coarse) {
+      .copy-btn, .clear-btn { padding: 10px 18px; font-size: 0.9rem; }
+      textarea { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Honest Reaction &rarr; Professional Reply</h1>
+  <p>Type what you really think, then hit Generate &mdash; we'll make it professional.</p>
+</header>
+
+
+<div class="app-grid">
+  <div class="panel raw">
+    <div class="panel-header">
+      <div class="panel-title"><span class="dot"></span>Honest Reaction</div>
+    </div>
+    <textarea id="rawInput"
+      placeholder="Type your raw, honest reaction here..."
+      oninput="updateCount()" dir="auto" spellcheck="false"></textarea>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" disabled>
+      &#10024; Generate Professional Reply
+    </button>
+    <div class="panel-footer">
+      <span class="char-count" id="rawCount">0 chars</span>
+      <button class="clear-btn" onclick="clearAll()">&#10005; Clear</button>
+    </div>
+  </div>
+
+  <div class="divider"><div class="arrow-icon">&#8594;</div></div>
+
+  <div class="panel pro">
+    <div class="panel-header">
+      <div class="panel-title"><span class="dot"></span>Professional Reply</div>
+    </div>
+    <textarea id="proOutput"
+      placeholder="Professional version will appear here..."
+      readonly dir="auto"></textarea>
+    <div class="panel-footer">
+      <span class="char-count" id="proCount">0 chars</span>
+      <button class="copy-btn" id="copyBtn" onclick="copyOutput()">&#128203; Copy</button>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar success" id="statusBar">Type your reaction, then click Generate.</div>
+
+<footer>Created by <strong>Nagesh Chawan</strong></footer>
+
+<script>
+
+
+function updateCount() {
+  const text = document.getElementById('rawInput').value;
+  document.getElementById('rawCount').textContent = text.length + ' chars';
+  document.getElementById('submitBtn').disabled = !text.trim();
+}
+
+function handleSubmit() {
+  const text = document.getElementById('rawInput').value.trim();
+  if (!text) return;
+  setBar('Generating...', '');
+  setLoading(true);
+  document.getElementById('submitBtn').disabled = true;
+  transform(text);
+}
+
+async function transform(raw) {
+  const prompt = `You are a professional communication coach. The user typed their raw, honest, possibly rude inner reaction. Rewrite it as a professional, respectful, constructive message for a workplace or formal context.
+
+Rules:
+- Remove rudeness, sarcasm, profanity.
+- Keep the core concern and intent.
+- Write the professional reply in English.
+- Output ONLY the transformed message. No preamble, no labels.
+
+Raw input:
+"""${raw}"""
+
+Professional version:`;
+
+  try {
+    const res = await fetch('/api/transform', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: raw })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setBar('Error: ' + (data?.error || 'HTTP ' + res.status), 'error');
+      setLoading(false); document.getElementById('submitBtn').disabled = false; return;
+    }
+    if (!data.result) { setBar('Empty response. Try again.', 'error'); setLoading(false); document.getElementById('submitBtn').disabled = false; return; }
+    setOut(data.result); setBar('Done!', 'success');
+    document.getElementById('submitBtn').disabled = false;
+  } catch (e) {
+    setBar('Network error: ' + e.message, 'error'); setLoading(false);
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+function setOut(t) {
+  const el = document.getElementById('proOutput');
+  el.value = t; el.classList.remove('loading');
+  document.getElementById('proCount').textContent = t.length + ' chars';
+}
+function setLoading(on) {
+  const el = document.getElementById('proOutput');
+  if (on) { el.classList.add('loading'); el.value = 'Transforming...'; }
+  else el.classList.remove('loading');
+}
+function setBar(msg, type) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg; el.className = 'status-bar ' + (type || '');
+}
+function clearAll() {
+  document.getElementById('rawInput').value = '';
+  document.getElementById('rawCount').textContent = '0 chars';
+  document.getElementById('submitBtn').disabled = true;
+  setOut(''); setBar('');
+}
+async function copyOutput() {
+  const t = document.getElementById('proOutput').value;
+  if (!t || t === 'Transforming...') return;
+  await navigator.clipboard.writeText(t);
+  const b = document.getElementById('copyBtn');
+  b.textContent = 'Copied!'; b.classList.add('copied');
+  setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('copied'); }, 2000);
+}
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    handleSubmit();
+  }
+});
+</script>
+</body>
+</html>
