@@ -73,11 +73,13 @@
     /* ── Textareas ── */
     textarea {
       width: 100%;
-      min-height: clamp(160px, 30vh, 280px);
+      min-height: clamp(200px, 35vh, 340px);
+      max-height: 70vh;
       background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
       border-radius: 10px; padding: clamp(10px, 2vw, 14px); color: var(--text);
       font-size: clamp(0.875rem, 1.5vw, 1rem); font-family: inherit; line-height: 1.7;
-      resize: vertical; outline: none; transition: border-color 0.25s;
+      resize: none; overflow-y: auto; outline: none; transition: border-color 0.25s;
+      field-sizing: content; /* auto-grow where supported */
     }
     textarea::placeholder { color: var(--muted); }
     textarea:focus { border-color: rgba(255,107,107,0.5); }
@@ -88,6 +90,8 @@
     /* ── Footer row inside panel ── */
     .panel-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .char-count { font-size: clamp(0.7rem, 1.5vw, 0.75rem); color: var(--muted); }
+    .char-warn { color: #ffd93d; }
+    .char-over { color: var(--accent-raw); font-weight: 600; }
 
     /* ── Buttons ── */
     .copy-btn {
@@ -169,7 +173,7 @@
         align-items: center;
       }
       .arrow-icon { transform: rotate(90deg); }
-      textarea { min-height: clamp(130px, 28vw, 180px); }
+      textarea { min-height: 160px; max-height: 50vh; }
     }
 
     /* Large screens: >= 1200px */
@@ -181,7 +185,7 @@
     /* Touch / pointer: make buttons larger for tap targets */
     @media (pointer: coarse) {
       .copy-btn, .clear-btn { padding: 10px 18px; font-size: 0.9rem; }
-      textarea { font-size: 1rem; }
+      textarea { font-size: 1rem; min-height: 160px; }
     }
   </style>
 </head>
@@ -189,7 +193,7 @@
 
 <header>
   <h1>Honest Reaction &rarr; Professional Reply</h1>
-  <p>Type what you really think, then hit Generate &mdash; we'll make it professional.</p>
+  <p>Type your raw reaction or full email draft, then hit Generate &mdash; we'll make it professional.</p>
 </header>
 
 
@@ -205,7 +209,7 @@
       &#10024; Generate Professional Reply
     </button>
     <div class="panel-footer">
-      <span class="char-count" id="rawCount">0 chars</span>
+      <span class="char-count" id="rawCount">0 words &middot; 0 / 8000 chars</span>
       <button class="clear-btn" onclick="clearAll()">&#10005; Clear</button>
     </div>
   </div>
@@ -220,7 +224,7 @@
       placeholder="Professional version will appear here..."
       readonly dir="auto"></textarea>
     <div class="panel-footer">
-      <span class="char-count" id="proCount">0 chars</span>
+      <span class="char-count" id="proCount">0 words &middot; 0 chars</span>
       <button class="copy-btn" id="copyBtn" onclick="copyOutput()">&#128203; Copy</button>
     </div>
   </div>
@@ -233,16 +237,26 @@
 <script>
 
 
+const MAX_CHARS = 8000;
+
 function updateCount() {
-  const text = document.getElementById('rawInput').value;
-  document.getElementById('rawCount').textContent = text.length + ' chars';
-  document.getElementById('submitBtn').disabled = !text.trim();
+  const ta = document.getElementById('rawInput');
+  const text = ta.value;
+  const chars = text.length;
+  const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+  const countEl = document.getElementById('rawCount');
+  countEl.textContent = words + ' words · ' + chars + ' / ' + MAX_CHARS + ' chars';
+  countEl.className = 'char-count' + (chars > MAX_CHARS ? ' char-over' : chars > MAX_CHARS * 0.85 ? ' char-warn' : '');
+  document.getElementById('submitBtn').disabled = !text.trim() || chars > MAX_CHARS;
+  // Auto-grow fallback for browsers without field-sizing support
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, window.innerHeight * 0.7) + 'px';
 }
 
 function handleSubmit() {
   const text = document.getElementById('rawInput').value.trim();
-  if (!text) return;
-  setBar('Generating...', '');
+  if (!text || text.length > MAX_CHARS) return;
+  setBar('Generating professional reply...', '');
   setLoading(true);
   document.getElementById('submitBtn').disabled = true;
   transform(text);
@@ -285,7 +299,11 @@ Professional version:`;
 function setOut(t) {
   const el = document.getElementById('proOutput');
   el.value = t; el.classList.remove('loading');
-  document.getElementById('proCount').textContent = t.length + ' chars';
+  const words = t.trim() === '' ? 0 : t.trim().split(/\s+/).length;
+  document.getElementById('proCount').textContent = words + ' words · ' + t.length + ' chars';
+  // Auto-grow output textarea
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.7) + 'px';
 }
 function setLoading(on) {
   const el = document.getElementById('proOutput');
@@ -297,9 +315,15 @@ function setBar(msg, type) {
   el.textContent = msg; el.className = 'status-bar ' + (type || '');
 }
 function clearAll() {
-  document.getElementById('rawInput').value = '';
-  document.getElementById('rawCount').textContent = '0 chars';
+  const ta = document.getElementById('rawInput');
+  ta.value = '';
+  ta.style.height = '';
+  document.getElementById('rawCount').textContent = '0 words · 0 / 8000 chars';
+  document.getElementById('rawCount').className = 'char-count';
   document.getElementById('submitBtn').disabled = true;
+  const out = document.getElementById('proOutput');
+  out.style.height = '';
+  document.getElementById('proCount').textContent = '0 words · 0 chars';
   setOut(''); setBar('');
 }
 async function copyOutput() {
